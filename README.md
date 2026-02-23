@@ -70,13 +70,94 @@ Secara garis besar, proyek ini menargetkan:
   - Hasil eksperimen dan analisis.
   - Peluang pengembangan lanjutan.
 
+## Kenapa Go, Bukan Ray?
+
+SOLO dirancang sebagai **alternatif ringan** terhadap [Ray](https://ray.io). Ray sangat powerful, namun untuk banyak kasus use-case AI orchestration:
+
+- **Overhead besar**: Ray membutuhkan Ray runtime, GCS, dashboard, dan komponen berat lainnya.
+- **Kompleksitas deployment**: Seringkali overkill untuk pipeline reasoning yang lebih sederhana.
+- **Resource footprint**: Ray actor/object store memakan memori dan CPU tambahan.
+
+SOLO menggunakan **Go** untuk:
+
+- Binary tunggal, tanpa runtime eksternal.
+- Startup cepat, footprint memori kecil.
+- Mudah di-deploy (container, Kubernetes, atau binary langsung).
+- Cocok untuk riset dan produksi yang butuh kontrol penuh.
+
+## Stack Teknologi
+
+- **Bahasa**: Go 1.22+
+- **Runtime**: Tanpa dependensi eksternal (no Ray, no Redis, no ZooKeeper untuk MVP).
+- **Target**: Kubernetes-ready, cloud-native.
+
+## Quick Start
+
+### Prasyarat
+
+- [Go 1.22+](https://go.dev/dl/)
+
+### Setup & Menjalankan
+
+```bash
+# Clone repositori
+git clone https://github.com/solo-ai/solo.git
+cd solo
+
+# Unduh dependensi
+go mod tidy
+
+# Build
+make build
+# atau: go build -o solo ./cmd/solo
+
+# Jalankan demo
+./solo
+```
+
+### Struktur Proyek
+
+```
+solo/
+├── cmd/
+│   └── solo/          # Entry point CLI
+├── pkg/
+│   ├── types/         # Task, Workflow, tipe data bersama
+│   ├── workflow/      # Graph DAG, topological ordering
+│   ├── worker/        # Worker pool (alternatif Ray actor)
+│   └── orchestrator/  # Core orchestration logic
+├── go.mod
+├── Makefile
+└── README.md
+```
+
+### Menggunakan di Kode
+
+```go
+wf := &types.Workflow{
+    Nodes: []types.WorkflowNode{
+        {ID: "step1", Name: "LLM Call", Executor: "llm", Inputs: []string{}},
+        {ID: "step2", Name: "Retrieval", Executor: "retriever", Inputs: []string{"step1"}},
+    },
+    EntryPoint: "step1",
+}
+
+executors := map[string]types.TaskExecutor{
+    "llm":       myLLMExecutor,
+    "retriever": myRetrieverExecutor,
+}
+
+orc, _ := orchestrator.New(wf, executors, nil)
+result, _ := orc.Run(ctx, map[string]interface{}{"query": "..."})
+```
+
 ## Status Saat Ini
 
-Repositori ini masih berada pada tahap **awal**. Beberapa hal yang akan dikerjakan dalam waktu dekat:
-
-- Mendesain _high-level architecture_ SOLO.
-- Menentukan stack teknologi utama (bahasa pemrograman, orchestrator runtime, dsb).
-- Membangun _minimal viable prototype_ untuk satu skenario reasoning terdistribusi.
+- ✅ **Struktur proyek Go** dengan `orchestrator`, `workflow`, `worker`.
+- ✅ **Demo minimal** workflow 2 langkah.
+- 🔲 Integrasi executor LLM/retriever/planner (placeholder).
+- 🔲 Distributed mode (multi-node).
+- 🔲 Observabilitas & tracing.
 
 Jika Anda membaca ini di tahap awal proyek, anggap ini sebagai **undangan terbuka** untuk mengikuti perjalanan pengembangan SOLO dari nol.
 
